@@ -1,0 +1,23 @@
+{
+  "name": "quinielapro-backend",
+  "version": "1.0.0",
+  "description": "Backend for QuinielaPro 2026",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "setup-db": "node db/createTables.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^8.0.7",
+    "pg": "^8.20.0"
+  }
+}
