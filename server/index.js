@@ -16,9 +16,10 @@ const PORT = process.env.PORT || 3000;
 
 // CORS para producción
 const allowedOrigins = [
-  "http://localhost:5173", // Desarrollo local
-  "http://localhost:4173", // Preview de Vite
-  process.env.FRONTEND_URL, // Producción (lo configurarás en Render)
+  "http://localhost:5173", 
+  "http://localhost:4173",
+  "https://quiniela2026.codigofocus.com",
+  process.env.FRONTEND_URL, 
 ].filter(Boolean);
 
 app.use(
