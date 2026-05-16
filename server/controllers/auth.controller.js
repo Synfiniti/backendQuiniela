@@ -182,12 +182,18 @@ export const login = async (req, res) => {
 // ============================================
 export const logout = async (req, res) => {
   try {
-    res.cookie('token', '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 0 });
+    res.cookie('token', '', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',              
+      partitioned: true,             
+      maxAge: 0
+    });
     res.json({ message: 'Sesión cerrada exitosamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al cerrar sesión' });
   }
-};
+};;
 
 // ============================================
 // VERIFICAR TOKEN
