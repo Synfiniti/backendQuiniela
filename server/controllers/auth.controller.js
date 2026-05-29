@@ -6,18 +6,20 @@ import nodemailer from 'nodemailer';
 // Configurar transportador de correo
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,                    // ⭐ Puerto 587 en vez de 465
-  secure: false,                // ⭐ false para TLS
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false   // ⭐ Para evitar errores de certificado
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2'
   },
-  connectionTimeout: 10000,     // 10 segundos de timeout
-  greetingTimeout: 10000,
-  socketTimeout: 15000
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
+  family: 4  // ⭐ FORZAR IPv4
 });
 
 // Función helper para generar JWT
