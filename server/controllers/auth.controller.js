@@ -1,7 +1,7 @@
-import db from '../../db/connection.js';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
+import db from '../../db/connection.js';
 
 // ⭐ Configurar Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -29,9 +29,9 @@ const generateResetCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// ⭐ Función para enviar email con Resend
 const sendResetEmail = async (email, code) => {
   console.log(`\n📧 Enviando código de recuperación a ${email}...`);
+  console.log(`📋 Código: ${code}`); // ⭐ Siempre mostrar en logs
 
   try {
     const { data, error } = await resend.emails.send({
@@ -42,21 +42,16 @@ const sendResetEmail = async (email, code) => {
         <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f7f9fc; padding: 40px 20px;">
           <div style="background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h2 style="color: #041534; margin-top: 16px; font-size: 24px;">QuinielaPro 2026</h2>
+              <h2 style="color: #041534; font-size: 24px;">QuinielaPro 2026</h2>
             </div>
             <h3 style="color: #191c1e; font-size: 20px; margin-bottom: 12px;">Recuperación de contraseña</h3>
-            <p style="color: #45464e; font-size: 16px; line-height: 24px; margin-bottom: 24px;">
-              Has solicitado restablecer tu contraseña. Usa el siguiente código para continuar:
+            <p style="color: #45464e; font-size: 16px; margin-bottom: 24px;">
+              Has solicitado restablecer tu contraseña. Usa el siguiente código:
             </p>
             <div style="background-color: #041534; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
               <span style="color: #ffffff; font-size: 36px; font-weight: bold; letter-spacing: 12px;">${code}</span>
             </div>
-            <p style="color: #75777f; font-size: 14px; line-height: 20px; margin-bottom: 8px;">
-              ⏰ Este código expirará en <strong>15 minutos</strong>.
-            </p>
-            <p style="color: #75777f; font-size: 14px; line-height: 20px;">
-              🔒 Si no solicitaste este cambio, puedes ignorar este mensaje.
-            </p>
+            <p style="color: #75777f; font-size: 14px;">⏰ Este código expirará en <strong>15 minutos</strong>.</p>
           </div>
         </div>
       `
@@ -67,13 +62,10 @@ const sendResetEmail = async (email, code) => {
       return false;
     }
 
-    console.log(`✅ Email enviado a ${email} (ID: ${data?.id})`);
+    console.log(`✅ Email enviado a ${email}`);
     return true;
   } catch (error) {
-    console.error('❌ Error enviando email:', error.message);
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📋 Código (desarrollo): ${code}`);
-    }
+    console.error('❌ Error:', error.message);
     return false;
   }
 };
