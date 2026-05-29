@@ -1,26 +1,10 @@
 import db from '../../db/connection.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Configurar transportador de correo
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false,
-    minVersion: 'TLSv1.2'
-  },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 20000,
-  family: 4  // ⭐ FORZAR IPv4
-});
+// ⭐ Configurar Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Función helper para generar JWT
 const generateToken = (userId, role) => {
@@ -34,34 +18,30 @@ const generateToken = (userId, role) => {
 const setTokenCookie = (res, token) => {
   res.cookie('token', token, {
     httpOnly: true,
-    secure: true,                    
-    sameSite: 'none',                
+    secure: true,
+    sameSite: 'none',
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    partitioned: true,               
+    partitioned: true,
   });
 };
 
-// Función para generar código de 6 dígitos
 const generateResetCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Función para enviar email
+// ⭐ Función para enviar email con Resend
 const sendResetEmail = async (email, code) => {
   console.log(`\n📧 Enviando código de recuperación a ${email}...`);
 
   try {
-    const info = await transporter.sendMail({
-      from: `"QuinielaPro 2026" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'QuinielaPro 2026 <onboarding@resend.dev>',
+      to: [email],
       subject: 'Código de recuperación - QuinielaPro 2026',
       html: `
         <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f7f9fc; padding: 40px 20px;">
           <div style="background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
             <div style="text-align: center; margin-bottom: 30px;">
-              <div style="display: inline-block; width: 60px; height: 60px; background-color: #041534; border-radius: 16px; text-align: center; line-height: 60px;">
-                <span style="color: white; font-size: 28px; font-weight: bold;">⚽</span>
-              </div>
               <h2 style="color: #041534; margin-top: 16px; font-size: 24px;">QuinielaPro 2026</h2>
             </div>
             <h3 style="color: #191c1e; font-size: 20px; margin-bottom: 12px;">Recuperación de contraseña</h3>
@@ -77,15 +57,17 @@ const sendResetEmail = async (email, code) => {
             <p style="color: #75777f; font-size: 14px; line-height: 20px;">
               🔒 Si no solicitaste este cambio, puedes ignorar este mensaje.
             </p>
-            <div style="border-top: 1px solid #e0e3e6; margin-top: 30px; padding-top: 20px; text-align: center;">
-              <p style="color: #75777f; font-size: 12px;">© 2026 QuinielaPro. Todos los derechos reservados.</p>
-            </div>
           </div>
         </div>
       `
     });
 
-    console.log(`✅ Email enviado a ${email}`);
+    if (error) {
+      console.error('❌ Error Resend:', error.message);
+      return false;
+    }
+
+    console.log(`✅ Email enviado a ${email} (ID: ${data?.id})`);
     return true;
   } catch (error) {
     console.error('❌ Error enviando email:', error.message);
@@ -195,15 +177,15 @@ export const logout = async (req, res) => {
     res.cookie('token', '', {
       httpOnly: true,
       secure: true,
-      sameSite: 'none',              
-      partitioned: true,             
+      sameSite: 'none',
+      partitioned: true,
       maxAge: 0
     });
     res.json({ message: 'Sesión cerrada exitosamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al cerrar sesión' });
   }
-};;
+};
 
 // ============================================
 // VERIFICAR TOKEN
@@ -230,7 +212,6 @@ export const me = async (req, res) => {
 // RECUPERACIÓN DE CONTRASEÑA
 // ============================================
 
-// 1. SOLICITAR CÓDIGO
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -244,11 +225,7 @@ export const forgotPassword = async (req, res) => {
     const user = userResult.rows[0];
     const code = generateResetCode();
 
-    // ⭐ CORRECCIÓN: Usar NOW() de PostgreSQL para que coincida con la zona horaria de la DB
-    // Invalidar tokens anteriores
     await db.query("UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE", [user.id]);
-
-    // Guardar nuevo token con NOW() + 15 minutos
     await db.query(
       "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')",
       [user.id, code]
@@ -266,7 +243,6 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// 2. VERIFICAR CÓDIGO
 export const verifyResetCode = async (req, res) => {
   try {
     const { email, code } = req.body;
@@ -278,7 +254,6 @@ export const verifyResetCode = async (req, res) => {
     }
 
     const user = userResult.rows[0];
-
     const tokenResult = await db.query(
       `SELECT * FROM password_reset_tokens 
        WHERE user_id = $1 AND token = $2 AND used = FALSE AND expires_at > NOW()
@@ -297,7 +272,6 @@ export const verifyResetCode = async (req, res) => {
   }
 };
 
-// 3. RESTABLECER CONTRASEÑA
 export const resetPassword = async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
@@ -308,7 +282,6 @@ export const resetPassword = async (req, res) => {
     if (userResult.rows.length === 0) return res.status(400).json({ error: 'Código inválido o expirado' });
 
     const user = userResult.rows[0];
-
     const tokenResult = await db.query(
       `SELECT * FROM password_reset_tokens 
        WHERE user_id = $1 AND token = $2 AND used = FALSE AND expires_at > NOW()
